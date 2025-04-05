@@ -17,7 +17,6 @@ def validate_case(user_case):
     """
     user_case = user_case.lower()
     
-    # Keywords for physical and mental health cases
     physical_keywords = ['injury', 'pain', 'surgery', 'acl', 'joint', 'knee', 'shoulder', 'fracture', 'recovery']
     mental_keywords = ['mental', 'addiction', 'alcohol', 'depression', 'anxiety', 'ptsd', 'stress', 'therapy']
     
@@ -33,7 +32,7 @@ def validate_user_case():
     Validate the user's rehabilitation case.
     """
     try:
-        data = request.get_json()  # FIXED: Use get_json() correctly
+        data = request.get_json()  
         if not data or 'case' not in data:
             return jsonify({'error': 'Missing case data'}), 400
 
@@ -84,20 +83,16 @@ def clean_gemini_response(response_text):
     Clean the Gemini API response to extract valid JSON.
     """
     try:
-        # Remove markdown code block syntax
         response_text = re.sub(r'^```json\n|^```\n|```$', '', response_text, flags=re.MULTILINE).strip()
         
-        # Fix common JSON formatting issues
         response_text = re.sub(r'(?m)^\s*//.*$', '', response_text)  # Remove comments
         response_text = re.sub(r',\s*}', '}', response_text)  # Remove trailing commas
         response_text = re.sub(r',\s*]', ']', response_text)  # Remove trailing commas in arrays
         
-        # Parse the JSON to ensure it's valid
         try:
             json_data = json.loads(response_text)
             return json_data
         except json.JSONDecodeError:
-            # If parsing fails, try to fix quotes
             response_text = re.sub(r'(?<!\\)"(\w+)":', r'"\1":', response_text)  # Fix quote issues in keys
             return json.loads(response_text)
             
@@ -120,18 +115,16 @@ def generate_roadmap():
 
         prompt = generate_prompt(data, data['case_type'])
         
-        # Request response from Gemini API
         response = model.generate_content(prompt + "\nRespond with ONLY valid JSON.")
 
         if not response.text:
             return jsonify({'error': 'Empty response from Gemini API'}), 500
         
-        # Clean and validate the Gemini response
         json_response = clean_gemini_response(response.text)
         return jsonify({'roadmap': json_response})
     
     except Exception as e:
-        print(f"Error generating roadmap: {str(e)}")  # For debugging
+        print(f"Error generating roadmap: {str(e)}") 
         return jsonify({'error': f"Failed to generate roadmap: {str(e)}"}), 500
 
 if __name__ == '__main__':

@@ -3,7 +3,6 @@ import requests
 import json
 from datetime import datetime
 
-# Configure page
 st.set_page_config(page_title="Rehab Assistant", layout="wide")
 st.markdown("""
     <style>
@@ -20,7 +19,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Initial form
 if 'current_step' not in st.session_state:
     st.session_state.current_step = 'case_input'
 
@@ -32,13 +30,11 @@ def show_roadmap(response):
         roadmap = response['roadmap']
         st.header("Your Personalized Rehabilitation Roadmap 🎯")
         
-        # Timeline visualization
         with st.expander("📅 Recovery Timeline", expanded=True):
             cols = st.columns(len(roadmap.get('timeline', [])))
             for idx, (step, date) in enumerate(roadmap.get('timeline', {}).items()):
                 cols[idx].markdown(f"**{step}**  \n`{date}`")
         
-        # Main content
         tab1, tab2, tab3 = st.tabs(["📋 Plan", "⚠️ Precautions", "🏆 Progress Tracking"])
         
         with tab1:
@@ -81,7 +77,6 @@ def show_roadmap(response):
     except Exception as e:
         st.error(f"Error displaying roadmap: {str(e)}")
 
-# Application flow
 if st.session_state.current_step == 'case_input':
     st.title("AI Rehabilitation Assistant 🩺")
     st.markdown("### Step 1: Describe Your Rehabilitation Need")
@@ -90,14 +85,13 @@ if st.session_state.current_step == 'case_input':
 if st.button("Continue"):
     response = requests.post('http://localhost:5000/validate-case', json={'case': case})
 
-    # Debugging: Print raw response
     print("Raw response:", response.text)
 
     try:
-        validation = response.json()  # Safely decode JSON
+        validation = response.json() 
     except requests.exceptions.JSONDecodeError:
         st.error("Invalid response from server. Please try again.")
-        st.stop()  # Stop execution
+        st.stop()  
 
     if 'error' in validation:
         st.error(validation['error'])

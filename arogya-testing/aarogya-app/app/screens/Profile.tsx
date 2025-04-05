@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useContext, useMemo } from "react";
-import { SafeAreaView, View, ScrollView, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { SafeAreaView, View, ScrollView, Text, Image, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import AppContext from "../auth/AuthContext";
 import { ScoreContext } from "../context/ScoreContext";
 import * as SecureStore from "expo-secure-store";
@@ -81,8 +81,28 @@ export default function ProfileScreen() {
 	}, [totalScore]);
 
 	const handleReevaluate = async () => {
-		await SecureStore.deleteItemAsync("roadmap");
-		navigation.navigate("form", { force: true });
+		// Ask user to confirm reevaluation
+		Alert.alert(
+			"Re-evaluate Your Program",
+			"This will generate a new personalized roadmap based on your updated information. Your earned points will be preserved. Would you like to continue?",
+			[
+				{
+					text: "Cancel",
+					style: "cancel"
+				},
+				{
+					text: "Continue",
+					onPress: async () => {
+						await SecureStore.deleteItemAsync("roadmap");
+						navigation.navigate("form", { 
+							force: true,
+							isReEvaluation: true
+						});
+					}
+				}
+			],
+			{ cancelable: true }
+		);
 	};
 
 	const { earnedBadges, unearnedBadges } = useMemo(() => {

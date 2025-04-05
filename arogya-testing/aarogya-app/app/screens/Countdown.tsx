@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { SafeAreaView, View, ScrollView, Text, TouchableOpacity } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { MainStackNavigationProps } from "../routes/MainStack";
@@ -12,21 +12,33 @@ export default function CountdownScreen() {
     const navigation = useNavigation<MainStackNavigationProps>();
     const route = useRoute();
     const exerciseName = (route.params as CountdownScreenProps)?.exerciseName || "Exercise";
+    const hasNavigated = useRef(false);
 
     useEffect(() => {
         const interval = setInterval(() => {
             setCount((prevCount) => {
                 if (prevCount <= 1) {
                     clearInterval(interval);
-                    navigation.replace("Exercising5");
+                    // Use setTimeout to ensure navigation happens after render is complete
+                    if (!hasNavigated.current) {
+                        hasNavigated.current = true;
+                        setTimeout(() => {
+                            // Fix the type error by providing parameters according to the navigation type
+                            navigation.replace("Exercising5");
+                            // If you need the exerciseName in Exercising5, consider using a global state
+                            // or storing it temporarily in AsyncStorage
+                        }, 0);
+                    }
                     return 0;
                 }
                 return prevCount - 1;
             });
         }, 1000);
     
-        return () => clearInterval(interval); // Clean up on unmount
-    }, [navigation]);
+        return () => {
+            clearInterval(interval); // Clean up on unmount
+        };
+    }, [navigation, exerciseName]);
     
     return (
         <SafeAreaView

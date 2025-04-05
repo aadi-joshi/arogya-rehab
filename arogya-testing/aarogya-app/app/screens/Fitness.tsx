@@ -1,14 +1,34 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useState } from "react";
 import { SafeAreaView, View, ScrollView, Image, Text, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { MainStackNavigationProps } from "../routes/MainStack";
+import ErrorMessage from "../components/ErrorMessage";
+import EmptyState from "../components/EmptyState";
+import Loading from "../components/Loading";
 
 export default function FitnessScreen() {
 	const navigation = useNavigation<MainStackNavigationProps>();
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	const handleButtonPress = () => {
-		navigation.navigate("Camera");
+		setLoading(true);
+		setError(null);
+		
+		try {
+			navigation.navigate("Camera");
+		} catch (err) {
+			console.error("Error navigating to camera: ", err);
+			setError("Could not access the camera feature. Please try again.");
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	// Consistent back navigation function
+	const handleBackPress = () => {
+		navigation.goBack();
 	};
 
 	return (
@@ -17,6 +37,8 @@ export default function FitnessScreen() {
 				flex: 1,
 				backgroundColor: "#FFFFFF",
 			}}>
+			{loading && <Loading visible={true} />}
+			
 			<ScrollView  
 				style={{
 					flex: 1,
@@ -36,19 +58,36 @@ export default function FitnessScreen() {
 							paddingHorizontal: 16,
 							marginBottom: 25,
 						}}>
-                        <Ionicons name="arrow-back" size={24} color="black" onPress={()=>{
-							navigation.goBack();
-						}}/>	
+                        {/* Consistent back button style */}
+                        <TouchableOpacity 
+                            style={{
+                                padding: 8,
+                                borderRadius: 20,
+                            }}
+                            onPress={handleBackPress}
+                        >
+                            <Ionicons name="arrow-back" size={24} color="black" />
+                        </TouchableOpacity>
 						<Text 
 							style={{
 								color: "#1C160C",
-								marginStart: 16,
 								fontSize: 18,
 								flex: 1,
+								marginLeft: 16,
+								fontWeight: "600",
 							}}>
-							{"Challenges"}
+							{"Fitness Challenges"}
 						</Text>
 					</View>
+					
+					{error && (
+						<ErrorMessage
+							message={error}
+							onRetry={() => setError(null)}
+							containerStyle={{ marginHorizontal: 16, marginBottom: 20 }}
+						/>
+					)}
+
 					<Text 
 						style={{
 							color: "#1C160C",
@@ -323,5 +362,5 @@ export default function FitnessScreen() {
 				</View>
 			</ScrollView>
 		</SafeAreaView>
-	)
+	);
 }

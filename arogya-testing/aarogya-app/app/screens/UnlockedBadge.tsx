@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
 	SafeAreaView,
 	View,
@@ -9,14 +9,15 @@ import {
 	Dimensions,
 	StyleSheet,
 	TouchableOpacity,
+	Animated,
 } from "react-native";
 import { MainStackNavigationProps } from "../routes/MainStack";
 import { useNavigation } from "expo-router";
+import Loading from "../components/Loading";
 
 interface Badge {
 	name: string;
 	description: string;
-	// iconUri: any;
 	imageUrl: any;
 }
 
@@ -26,21 +27,21 @@ const badgesData = [
 		name: "First Step Badge",
 		description: "For getting 500 total score",
 		imageUrl: "https://kylesethgray.com/content/images/2018/08/thanksgiving_day_challenge_5k.png",
-		requiredScore: 500
+		requiredScore: 500,
 	},
 	{
 		id: 2,
 		name: "Second Step Badge",
 		description: "For getting 1000 total score",
 		imageUrl: "https://kylesethgray.com/content/images/2018/08/new_year_2017.png",
-		requiredScore: 1000
+		requiredScore: 1000,
 	},
 	{
 		id: 3,
 		name: "Five Steps Badge",
 		description: "For getting 5000 total score",
 		imageUrl: "https://kylesethgray.com/content/images/2018/08/VeteransDay_Sticker.png",
-		requiredScore: 5000
+		requiredScore: 5000,
 	},
 	{
 		id: 5,
@@ -48,7 +49,7 @@ const badgesData = [
 		description: "For completing activities 7 days in a row",
 		imageUrl: "https://media.istockphoto.com/id/905084084/vector/bw-icon-finish-line.jpg?s=612x612&w=0&k=20&c=lhUJ8l42IlT9JX6g7AR7wG5a3FarXNtZq6Q4yUT-wSA=",
 		requiredScore: 2500,
-		specialRequirement: "7-day streak"
+		specialRequirement: "7-day streak",
 	},
 ];
 
@@ -59,6 +60,7 @@ const { width } = Dimensions.get("window");
 
 export default function UnlockedBadgeScreen() {
 	const [currentIndex, setCurrentIndex] = useState(0);
+	const [loading, setLoading] = useState(true);
 	const viewabilityConfig = { viewAreaCoveragePercentThreshold: 50 };
 	const navigation = useNavigation<MainStackNavigationProps>();
 	const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
@@ -67,71 +69,106 @@ export default function UnlockedBadgeScreen() {
 		}
 	}).current;
 
+	useEffect(() => {
+		// Simulate loading of badge data
+		const timer = setTimeout(() => {
+			setLoading(false);
+		}, 1000);
+
+		return () => clearTimeout(timer);
+	}, []);
+
 	return (
 		<SafeAreaView style={styles.container}>
-			<View
-				style={{
-					alignItems: "center",
-					justifyContent: "center",
-					gap: 10,
-					paddingVertical: 10,
-					marginHorizontal: 30,
-				}}
-			>
-				<Ionicons name="ribbon" size={36} />
-				<Text style={{ fontSize: 26, fontWeight: "bold", textAlign: "center" }}>
-					Congrats! You've unlocked new badges!
-				</Text>
-			</View>
-			<FlatList
-				data={badgesUnlocked}
-				horizontal
-				pagingEnabled
-				showsHorizontalScrollIndicator={false}
-				keyExtractor={(item, index) => index.toString()}
-				renderItem={({ item }) => (
-					<View style={styles.badgeContainer}>
-						{/* <Image source={item.iconUri} style={styles.image} /> */}
-						<Image source={{ uri: item.imageUrl }} style={styles.image} />
-						<Text style={styles.title}>{item.name}</Text>
-						<Text style={styles.description}>{item.description}</Text>
-					</View>
-				)}
-				viewabilityConfig={viewabilityConfig}
-				onViewableItemsChanged={onViewableItemsChanged}
-			/>
-			<View style={styles.dotContainer}>
-				{badgesUnlocked.map((_, index) => (
+			{loading ? (
+				<Loading visible={true} />
+			) : (
+				<>
 					<View
-						key={index}
-						style={[styles.dot, currentIndex === index && styles.activeDot]}
+						style={{
+							alignItems: "center",
+							justifyContent: "center",
+							gap: 10,
+							paddingVertical: 10,
+							marginHorizontal: 30,
+						}}
+					>
+						{/* Add animation to the badge icon */}
+						<Animated.View
+							style={{
+								transform: [{ scale: new Animated.Value(1) }],
+							}}
+						>
+							<Ionicons
+								name="ribbon"
+								size={36}
+								color="#F99E16"
+								style={{
+									shadowColor: "#F99E16",
+									shadowOffset: { width: 0, height: 0 },
+									shadowOpacity: 0.5,
+									shadowRadius: 10,
+								}}
+							/>
+						</Animated.View>
+						<Text style={{ fontSize: 26, fontWeight: "bold", textAlign: "center", color: "#21160A" }}>
+							Congrats! You've unlocked new badges!
+						</Text>
+					</View>
+					<FlatList
+						data={badgesUnlocked}
+						horizontal
+						pagingEnabled
+						showsHorizontalScrollIndicator={false}
+						keyExtractor={(item, index) => index.toString()}
+						renderItem={({ item }) => (
+							<View style={styles.badgeContainer}>
+								<Image source={{ uri: item.imageUrl }} style={styles.image} />
+								<Text style={styles.title}>{item.name}</Text>
+								<Text style={styles.description}>{item.description}</Text>
+							</View>
+						)}
+						viewabilityConfig={viewabilityConfig}
+						onViewableItemsChanged={onViewableItemsChanged}
 					/>
-				))}
-			</View>
+					<View style={styles.dotContainer}>
+						{badgesUnlocked.map((_, index) => (
+							<View
+								key={index}
+								style={[styles.dot, currentIndex === index && styles.activeDot]}
+							/>
+						))}
+					</View>
 
-			<TouchableOpacity
-				style={{
-					alignItems: "center",
-					backgroundColor: "#F99E16",
-					borderRadius: 12,
-					padding: 14,
-					alignSelf: "stretch",
-					marginBottom: 12,
-					marginHorizontal: 16,
-				}} onPress={() => {
-					navigation.reset({
-						index: 0,
-						routes: [{ name: "MainTabs" }],
-					})
-				}}>
-				<Text
-					style={{
-						fontSize: 16,
-						textAlign: "center",
-					}}>
-					{"Continue"}
-				</Text>
-			</TouchableOpacity>
+					{/* Add a consistent button to return */}
+					<TouchableOpacity
+						style={{
+							backgroundColor: "#F99E16",
+							paddingVertical: 15,
+							paddingHorizontal: 30,
+							borderRadius: 12,
+							alignSelf: "center",
+							marginBottom: 20,
+						}}
+						onPress={() =>
+							navigation.reset({
+								index: 0,
+								routes: [{ name: "MainTabs" }],
+							})
+						}
+					>
+						<Text
+							style={{
+								color: "#21160A",
+								fontSize: 16,
+								fontWeight: "600",
+							}}
+						>
+							Continue
+						</Text>
+					</TouchableOpacity>
+				</>
+			)}
 		</SafeAreaView>
 	);
 }

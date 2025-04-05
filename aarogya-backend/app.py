@@ -307,6 +307,11 @@ def chat():
         return jsonify({"message": f"Failed to generate response, {response.error_content()}"}), 500
     if response:
         ai_response = response.content
+        
+        # Store the original response for database
+        complete_response = ai_response
+        
+        # But ensure we return a clean format to the frontend
         if not conversation_id:
             conversation_id = new_conversation_id()
 
@@ -314,12 +319,14 @@ def chat():
             "conversation_id": conversation_id,
             "user_id": user_id,
             "user_message": user_message,
-            "bot_message": ai_response,
+            "bot_message": complete_response,  # Store the full response
             "created_at": datetime.datetime.utcnow()
         }
 
         Thread(target=mongo.db.messages.insert_one,
                args=(complete_message,)).start()
+        
+        # Return only the necessary fields to the frontend
         return jsonify({"message": ai_response, "conversation_id": conversation_id}), 200
     else:
         return jsonify({"message": "Failed to fetch response from API"}), 500

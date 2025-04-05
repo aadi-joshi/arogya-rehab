@@ -83,6 +83,12 @@ export default function Router() {
     if (isLoading) return <Loading />
 
     return (
-        isLoggedIn ? <MainNavigator /> : <AuthNavigator />
-    )
+        <>
+            {isLoggedIn && user ? (
+                <MainNavigator />
+            ) : (
+                <AuthNavigator />
+            )}
+        </>
+    );
 }

@@ -12,6 +12,7 @@ export default function FormScreen() {
     const { authService, user, setUser } = useContext(AppContext);
     const [age, setAge] = useState('');
     const navigation = useNavigation<MainStackNavigationProps>();
+    const route = useRoute();
     const [gender, setGender] = useState((user && user.gender != "") ? user.gender : "");
     const [height, setHeight] = useState((user && user.height != "") ? user.height : "");
     const [weight, setWeight] = useState((user && user.weight != "") ? user.weight : "");
@@ -24,7 +25,8 @@ export default function FormScreen() {
     const [showDrinkingModal, setShowDrinkingModal] = useState(false);
     const genderOptions = ['Male', 'Female', 'Other'];
     const yesNoOptions = ['Never', 'Sometimes', 'Frequently'];
-    const forceGenerate = (useRoute().params as RoadmpaGenerationExtraProps)?.force || false;
+    const isReEvaluation = route.params && (route.params as any).isReEvaluation === true;
+    const forceGenerate = (route.params as RoadmpaGenerationExtraProps)?.force || false;
 
     useEffect(() => {
         console.log(user);
@@ -42,7 +44,13 @@ export default function FormScreen() {
     }, []);
 
     const handleBack = () => {
-        navigation.navigate("MainTabs");
+        if (isReEvaluation) {
+            navigation.goBack();
+        } else {
+            if (user?.formFilled) {
+                navigation.navigate("MainTabs");
+            }
+        }
     };
 
     const handleNumberInput = (text: string, setter: React.Dispatch<React.SetStateAction<string>>, min: number, max: number) => {
@@ -88,8 +96,9 @@ export default function FormScreen() {
                     UserProfiledb.setProfile(updatedUser);
 
                     console.log("User account updated successfully", responseJson);
-                    navigation.navigate("GeneratingRoadmap",{
-                        force: forceGenerate
+                    navigation.navigate("GeneratingRoadmap", {
+                        force: forceGenerate,
+                        isReEvaluation: isReEvaluation
                     });
                     return;
                 }
@@ -136,7 +145,7 @@ export default function FormScreen() {
                             textAlign: "center",
                             marginBottom: 22,
                         }}>
-                        {"Let's get started!"}
+                        {isReEvaluation ? "Let's update your information!" : "Let's get started!"}
                     </Text>
                     <Text
                         style={{

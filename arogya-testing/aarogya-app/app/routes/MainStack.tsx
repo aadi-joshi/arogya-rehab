@@ -23,9 +23,11 @@ export type MainStackParamsList = {
     camera: undefined,
     form: {
         force: boolean;
+        isReEvaluation?: boolean;
     },
     GeneratingRoadmap: {
         force: boolean;
+        isReEvaluation?: boolean;
     },
     BadgesUnlocked: undefined,
     MainTabs: undefined,
@@ -54,7 +56,14 @@ const MainNavigator = () => {
     return (
         <ScoreProvider>
             <Stack.Navigator initialRouteName={user?.formFilled ? "MainTabs" : "form"}>
-                <Stack.Screen name="form" component={FormScreen} options={{ headerShown: false }} />
+                <Stack.Screen 
+                    name="form" 
+                    component={FormScreen} 
+                    options={{ 
+                        headerShown: false,
+                        gestureEnabled: false
+                    }} 
+                />
                 <Stack.Screen name="GeneratingRoadmap" component={GeneratingRoadmapScreen} options={{ headerShown: false }} />
                 <Stack.Screen name="BadgesUnlocked" component={UnlockedBadgeScreen} options={{ headerShown: false }} />
                 <Stack.Screen name="MainTabs" component={MainTabsNavigator} options={{ headerShown: false }} />

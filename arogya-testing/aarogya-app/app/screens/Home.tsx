@@ -11,6 +11,9 @@ import { Roadmap } from "../types/Roadmap";
 import { MainStackNavigationProps } from "../routes/MainStack";
 import QuoteCarousel from "../components/QuotesCarousel";
 import Localdb from "../utils/Localdb";
+import ErrorMessage from "../components/ErrorMessage";
+import EmptyState from "../components/EmptyState";
+import Loading from "../components/Loading";
 
 const CALORIES_PER_STEP = 0.05;
 
@@ -38,13 +41,8 @@ export default function HomeScreen() {
     const [iscounting, setIscounting] = useState(false);
     const [lastY, setLastY] = useState(0);
     const [lastTime, setLastTime] = useState(0);
-
-    // React.useEffect(() => {
-    //     (async () => {
-    //         const rcount = await SecureStorage.getItemAsync("ex-count") || "0";
-    //         setExercisesCount(parseInt(rcount));
-    //     })();
-    // }, []);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     React.useEffect(() => {
         setSteps(Localdb.getStepCount());
@@ -58,7 +56,6 @@ export default function HomeScreen() {
             setCurrentTotalScore(exercisesCountStoreVal * 100);
         }, 1000);
     }, [exercisesCount]);
-
 
     React.useEffect(() => {
         let subscription: any;
@@ -98,19 +95,31 @@ export default function HomeScreen() {
         };
     }, [iscounting, lastY, lastTime]);
 
-    const estimatedCaloriesBurned = () => (steps * CALORIES_PER_STEP)
+    const estimatedCaloriesBurned = () => (steps * CALORIES_PER_STEP);
 
     React.useEffect(() => {
         if (!roadmapGenerated) {
+            setLoading(true);
+            setError(null);
+
             roadmapGeneratorRef.current.generateRoadmap()
-                .then((response) => {
-                    if (response) {
-                        setRoadmap(response);
-                    }
+                .then((roadmapData) => {
+                    setRoadmap(roadmapData);
                     setRoadmapGenerated(true);
+                })
+                .catch((e) => {
+                    console.error("Error generating roadmap: ", e);
+                    setError("Failed to load your fitness roadmap. Please try again.");
+                })
+                .finally(() => {
+                    setLoading(false);
                 });
         }
-    }, []);
+    }, [roadmapGenerated]);
+
+    const handleRetryRoadmap = () => {
+        setRoadmapGenerated(false);
+    };
 
     const BoxItem = ({ title, value }: { title: string, value: any }) => {
         return (
@@ -153,6 +162,7 @@ export default function HomeScreen() {
             <ScrollView
                 style={{
                     flex: 1,
+                    backgroundColor: "#FFFFFF",
                 }}>
                 <View
                     style={{
@@ -246,25 +256,50 @@ export default function HomeScreen() {
                         }}>
                         {"Today's roadmap"}
                     </Text>
-                    {
-                        !roadmapGenerated ? (
-                            <View
-                                style={{
-                                    flex: 1,
-                                    justifyContent: "center",
-                                    alignItems: "center",
-                                    marginStart: 40,
-                                    paddingBottom: 50
-                                }}
-                            >
-                                <LoadingIndicator text="Generating" />
-                            </View>
-                        ) : (
-                            <>
-                                <ExerciseRoadmap data={roadmap} roadmapProgress={exercisesCount * 0.5} />
-                            </>
-                        )
-                    }
+                    <View
+                        style={{
+                            flex: 1
+                        }}
+                    >
+                        {/* Show loading indicator when generating roadmap */}
+                        {loading && <Loading visible={true} />}
+
+                        {/* Show error message if roadmap generation failed */}
+                        {error && (
+                            <ErrorMessage
+                                message={error}
+                                onRetry={handleRetryRoadmap}
+                                containerStyle={{ marginVertical: 20 }}
+                            />
+                        )}
+
+                        {/* Render roadmap content if available, or empty state if not */}
+                        {!loading && !error && (
+                            !roadmapGenerated ? (
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        justifyContent: "center",
+                                        alignItems: "center",
+                                        marginStart: 40,
+                                        paddingBottom: 50
+                                    }}
+                                >
+                                    <LoadingIndicator text="Generating" />
+                                </View>
+                            ) : !roadmap?.roadmap ? (
+                                <EmptyState
+                                    icon="fitness-outline"
+                                    title="No Roadmap Available"
+                                    message="We couldn't find your exercise roadmap. Try generating a new one."
+                                />
+                            ) : (
+                                <>
+                                    <ExerciseRoadmap data={roadmap} roadmapProgress={exercisesCount * 0.5} />
+                                </>
+                            )
+                        )}
+                    </View>
                     <TouchableOpacity
                         style={{
                             alignItems: "center",

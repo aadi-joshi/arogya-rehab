@@ -1,21 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
-import { SafeAreaView, View, ScrollView, Text, TouchableOpacity, Alert, Linking, Platform } from "react-native";
+import { SafeAreaView, View, ScrollView, Text, TouchableOpacity, Alert, Linking, Platform, Image } from "react-native";
 import { CameraView, Camera, useCameraPermissions, CameraType } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
-import { WebView } from "react-native-webview"; // Import WebView
-import { Api } from "../utils/ApiConstants";
-import * as SecureStorage from "expo-secure-store";
+import { WebView } from "react-native-webview";
 import ExerciseUtils from "../utils/ExerciseUtils";
 import { useRoute } from "@react-navigation/native";
 import { CountdownScreenProps } from "./Countdown";
 import { useNavigation } from "expo-router";
 import { MainStackNavigationProps } from "../routes/MainStack";
+import Localdb from "../utils/Localdb";
 
 export type ExerciseScreenProps = {
     exerciseName: string;
 }
-
-const DELAY = 1000;
 
 const TabButtons = ({ tabs, activeTab, setActiveTab }: { tabs: string[], activeTab: string, setActiveTab: (tab: string) => void }) => {
     return (
@@ -49,7 +46,7 @@ const ExerciseDemoVideo = ({ url }: { url: string | null } = { url: null }) => {
                 <WebView
                     style={{
                         height: 20,
-                        overflow: 'hidden' // Ensures the border radius is applied correctly
+                        overflow: 'hidden'
                     }}
                     javaScriptEnabled={true}
                     domStorageEnabled={true}
@@ -61,75 +58,40 @@ const ExerciseDemoVideo = ({ url }: { url: string | null } = { url: null }) => {
 };
 
 export default function Exercising5() {
-    const [facing, setFacing] = useState<CameraType>('front');
+    const [facing, setFacing] = useState<CameraType>('back');
     const [permission, requestPermission] = useCameraPermissions();
-    const camera = useRef(null);
+    const camera = useRef<CameraView>(null);
     const [showCamera, setShowCamera] = useState(true);
+    const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const route = useRoute();
     const navigation = useNavigation<MainStackNavigationProps>();
     const extraExerciseName = (route.params as CountdownScreenProps)?.exerciseName || "Exercise";
-    const exerciseName = "finger_splaying";
-    const exerciseRef = useRef(new ExerciseUtils(exerciseName));
-    const [count, setCount] = React.useState(0);
-    const [exerciseMessage, setExerciseMessage] = React.useState("Please follow the instructions");
-    const [isCompleted, setIsCompleted] = React.useState(false);
-    const TOTAL_COUNT = 15;
+    const exerciseRef = useRef(new ExerciseUtils(extraExerciseName));
+    const [count, setCount] = useState(0);
+    const [exerciseMessage, setExerciseMessage] = useState("Follow the instructions and tap the camera button to record your exercise");
+    const [isCompleted, setIsCompleted] = useState(false);
+    const TOTAL_COUNT = 10;
     const [activeTab, setActiveTab] = useState("Exercise");
 
     useEffect(() => {
         (async () => {
-            exerciseRef.current.save();
-            // const rcount = await SecureStorage.getItemAsync("ex-count") || "0";
-            // await SecureStorage.setItemAsync("ex-count", (parseInt(rcount) + 1).toString());
+            // Initialize exercise utility
+            exerciseRef.current = new ExerciseUtils(extraExerciseName);
         })();
     }, []);
 
-    const sendImage = async (base64Image: string) => {
-        try {
-            const response = await Api.post(Api.RECORD_EXERCISE_URL, {
-                image: base64Image,
-                exercise: exerciseName,
-                state: exerciseRef.current.getExerciseData()
-            });
-            if (response.responseJson.result) {
-                const exerciseData = response.responseJson.result;
-                exerciseRef.current.saveExerciseDataFromResponse(exerciseData);
-                if (exerciseData.rep_count) {
-                    setCount(exerciseData.rep_count);
-                }
-                if (exerciseData.completed && exerciseData.completed === true) {
-                    setIsCompleted(true);
-                    setExerciseMessage("Well done! You have completed the exercise.");
-                    return;
-                }
-                setExerciseMessage((prev) => exerciseRef.current.getMessage() || prev);
-                console.log(exerciseRef.current.getMessage());
-            }
-        } catch (error) {
-            console.log("Error sending image:", error);
-        }
-    };
-
     useEffect(() => {
-        let interval;
-        interval = setInterval(async () => {
-            if (camera.current && !isCompleted && showCamera) {
-                try {
-                    const photo = await (camera.current as CameraView).takePictureAsync({ base64: true, shutterSound: false });
-                    if (photo && photo.base64) {
-                        sendImage(photo.base64);
-                    }
-                } catch (error) {
-                    console.error("Error capturing image:", error);
-                }
-            }
-        }, DELAY);
-        return () => clearInterval(interval);
-    }, [permission]);
-
+        // Check if exercise is completed
+        if (count >= TOTAL_COUNT) {
+            setIsCompleted(true);
+            setExerciseMessage("Well done! You have completed the exercise.");
+            exerciseRef.current.save();
+        }
+    }, [count]);
 
     useEffect(() => {
         if (permission?.granted == true) return;
+
         if (!permission?.granted && permission?.canAskAgain) {
             showPermissionAlert();
         }
@@ -158,6 +120,35 @@ export default function Exercising5() {
         setShowCamera(!showCamera);
     };
 
+    const toggleCamera = () => {
+        setFacing(facing === 'front' ? 'back' : 'front');
+    };
+
+    const takePicture = async () => {
+        if (camera.current && !isCompleted) {
+            try {
+                const photo = await camera.current.takePictureAsync();
+                setCapturedImage(photo?.uri || null);
+                
+                // Increment count when photo is taken
+                setCount(prev => {
+                    const newCount = prev + 1;
+                    setExerciseMessage(`Great job! ${newCount}/${TOTAL_COUNT} completed`);
+                    return newCount;
+                });
+                
+                // Clear captured image after a short delay
+                setTimeout(() => {
+                    setCapturedImage(null);
+                }, 1000);
+                
+            } catch (error) {
+                console.error("Error taking picture:", error);
+                setExerciseMessage("Failed to take picture. Please try again.");
+            }
+        }
+    };
+
     return (
         <SafeAreaView style={{ flex: 1 }}>
             <View style={{ flex: 1, flexDirection: 'column' }}>
@@ -167,6 +158,7 @@ export default function Exercising5() {
                     position: "absolute",
                     opacity: 0.9,
                     paddingVertical: 10,
+                    backgroundColor: "#FFFFFF",
                 }}>
                     <Text style={{
                         fontSize: 18,
@@ -181,24 +173,27 @@ export default function Exercising5() {
                         !isCompleted && (
                             <View style={{
                                 alignItems: "center",
-                                backgroundColor: "orange",
+                                backgroundColor: "#F99E16",
                                 padding: 12,
+                                marginHorizontal: 20,
+                                borderRadius: 8,
                             }}>
                                 <Text style={{
                                     color: "#21160A",
                                     fontSize: 14,
                                     flex: 1,
                                     marginBottom: 8,
-                                    fontWeight: "500"
+                                    fontWeight: "500",
+                                    textAlign: "center"
                                 }}>
                                     {exerciseMessage}
                                 </Text>
                                 <Text style={{
-                                    color: "#007AFF",
+                                    color: "#21160A",
                                     fontSize: 14,
                                     fontWeight: "600"
                                 }}>
-                                    {`Counter: ${count}/${TOTAL_COUNT}`}
+                                    {`Progress: ${count}/${TOTAL_COUNT}`}
                                 </Text>
                             </View>
                         )
@@ -212,19 +207,21 @@ export default function Exercising5() {
                                 width: '100%',
                                 marginVertical: 5
                             }}>
-                                <TabButtons tabs={["Exercise", "View Demo"]} activeTab={activeTab} setActiveTab={(tab) => {
-                                    setActiveTab(tab);
-                                    setShowCamera(tab === "Exercise");
-                                }} />
+                                <TabButtons 
+                                    tabs={["Exercise", "View Demo"]} 
+                                    activeTab={activeTab} 
+                                    setActiveTab={(tab) => {
+                                        setActiveTab(tab);
+                                        setShowCamera(tab === "Exercise");
+                                    }} 
+                                />
                             </View>
                         )
                     }
-
                 </View>
 
                 {
                     isCompleted ? (
-
                         <View style={{
                             position: "absolute",
                             top: 0,
@@ -234,20 +231,40 @@ export default function Exercising5() {
                             flex: 1,
                             justifyContent: "center",
                             alignItems: "center",
+                            backgroundColor: "#FFFFFF"
                         }}>
                             <Ionicons name="checkmark-circle" size={128} color="green" style={{ marginBottom: 18 }} />
                             <Text style={{ fontSize: 24, fontWeight: "bold" }}>Exercise Completed!</Text>
                             <Text style={{ fontSize: 18, fontWeight: "bold", marginTop: 20 }}>You earned two new badges!</Text>
                         </View>
                     ) : (
-                        <View style={{ flex: 1, width: '100%' }}>
+                        <View style={{ flex: 1, width: '100%', marginTop: 120 }}>
                             {permission?.granted ? (
                                 showCamera ? (
-                                    <CameraView
-                                        ref={camera}
-                                        style={{ flex: 1 }}
-                                        facing={facing}
-                                    />
+                                    <View style={{ flex: 1 }}>
+                                        <CameraView
+                                            ref={camera}
+                                            style={{ flex: 1 }}
+                                            facing={facing}
+                                        />
+                                        {capturedImage && (
+                                            <View style={{ 
+                                                position: 'absolute', 
+                                                top: 0, 
+                                                left: 0, 
+                                                right: 0, 
+                                                bottom: 0, 
+                                                justifyContent: 'center', 
+                                                alignItems: 'center',
+                                                backgroundColor: 'rgba(0,0,0,0.5)'
+                                            }}>
+                                                <Image 
+                                                    source={{ uri: capturedImage }} 
+                                                    style={{ width: 200, height: 200, borderRadius: 10 }}
+                                                />
+                                            </View>
+                                        )}
+                                    </View>
                                 ) : (
                                     <ExerciseDemoVideo url={null} />
                                 )
@@ -276,7 +293,7 @@ export default function Exercising5() {
                     }}
                 >
                     {
-                        !isCompleted && (
+                        !isCompleted && showCamera && permission?.granted && (
                             <View style={{
                                 alignItems: "center",
                                 width: '100%',
@@ -302,7 +319,13 @@ export default function Exercising5() {
                                         shadowRadius: 4,
                                         elevation: 4
                                     }}>
-                                        <TouchableOpacity><Ionicons name="images-outline" size={24} color="black" /></TouchableOpacity>
+                                        <TouchableOpacity onPress={toggleView}>
+                                            <Ionicons
+                                                name={showCamera ? "videocam-outline" : "camera-outline"}
+                                                size={24}
+                                                color="black"
+                                            />
+                                        </TouchableOpacity>
                                     </View>
                                     <View style={{
                                         width: 64,
@@ -318,11 +341,11 @@ export default function Exercising5() {
                                         shadowRadius: 4,
                                         elevation: 4
                                     }}>
-                                        <TouchableOpacity onPress={toggleView}>
+                                        <TouchableOpacity onPress={takePicture}>
                                             <Ionicons
-                                                name={showCamera ? "camera-outline" : "videocam-outline"}
+                                                name="camera"
                                                 size={32}
-                                                color="black"
+                                                color="#F99E16"
                                             />
                                         </TouchableOpacity>
                                     </View>
@@ -340,7 +363,9 @@ export default function Exercising5() {
                                         shadowRadius: 4,
                                         elevation: 4
                                     }}>
-                                        <TouchableOpacity><Ionicons name="refresh-outline" size={24} color="black" /></TouchableOpacity>
+                                        <TouchableOpacity onPress={toggleCamera}>
+                                            <Ionicons name="sync-outline" size={24} color="black" />
+                                        </TouchableOpacity>
                                     </View>
                                 </View>
                             </View>
@@ -367,14 +392,11 @@ export default function Exercising5() {
                                             marginRight: 8
                                         }}
                                         onPress={() => {
-                                            navigation.reset({
-                                                index: 0,
-                                                routes: [{ name: "BadgesUnlocked" }],
-                                            })
+                                            navigation.goBack();
                                         }}
                                     >
                                         <Text style={{ color: "#21160A", fontSize: 16 }}>
-                                            {"Alternate"}
+                                            {"Back"}
                                         </Text>
                                     </TouchableOpacity>
                                 )
@@ -384,27 +406,32 @@ export default function Exercising5() {
                                 style={{
                                     flex: 1,
                                     alignItems: "center",
-                                    backgroundColor: isCompleted ? "green" : "#F4EADB",
+                                    backgroundColor: isCompleted ? "green" : "#F99E16",
                                     borderRadius: 8,
                                     paddingVertical: 18,
-                                    marginLeft: 8
+                                    marginLeft: isCompleted ? 0 : 8
                                 }}
                                 onPress={() => {
-                                    navigation.reset({
-                                        index: 0,
-                                        routes: [{ name: "MainTabs" }],
-                                    });
+                                    if (isCompleted) {
+                                        navigation.reset({
+                                            index: 0,
+                                            routes: [{ name: "MainTabs" }],
+                                        });
+                                    } else {
+                                        // Skip the exercise
+                                        setIsCompleted(true);
+                                        exerciseRef.current.save();
+                                    }
                                 }}
                             >
-                                <Text style={{ color: isCompleted ? "white" : "#21160A", fontSize: 16 }}>
-                                    {"Next"}
+                                <Text style={{ color: "#FFFFFF", fontSize: 16 }}>
+                                    {isCompleted ? "Finish" : "Skip"}
                                 </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
                 </View>
-
             </View>
-        </SafeAreaView >
+        </SafeAreaView>
     )
 }

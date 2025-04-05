@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "aarogya-app",
+    "slug": "aarogya-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/playstore.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to take photos."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "CAMERA",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.anonymous.aarogyaapp"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "react-native-bottom-tabs",
+      "expo-camera",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/playstore.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "cfef29dd-88f8-4185-8909-50868e9fac3a"
+      },
+      "isLocalBackend": {
+        "value": "process.env.EXPO_PUBLIC_USE_LOCAL_BACKEND === 'true'"
+      }
+    },
+    "owner": "theuserishere"
+  }
+}

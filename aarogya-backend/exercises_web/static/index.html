@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Exercise Tracker</title>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; }
+        #webcam { width: 100vw; height: 100vh; object-fit: cover; transform: rotateY(180deg); }
+    </style>
+</head>
+<body>
+    <video id="webcam" autoplay playsinline></video>
+
+    <script>
+        const webcam = document.getElementById('webcam');
+        let isTracking = false;
+        let trackingInterval;
+        let stream = null;
+
+        async function setupCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user' }
+                });
+                webcam.srcObject = stream;
+                
+                await new Promise((resolve) => {
+                    webcam.onloadedmetadata = () => {
+                        webcam.play().then(resolve);
+                    };
+                });
+                
+                startTracking();
+            } catch (err) {
+                console.error('Camera error:', err);
+            }
+        }
+
+        async function trackFrame() {
+            if (!isTracking) return;
+            
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = webcam.videoWidth;
+                canvas.height = webcam.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(webcam, 0, 0);
+                
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image: canvas.toDataURL('image/jpeg', 0.8)
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    console.log('Rep Count:', data.splay_count[data.current_hand]);
+                }
+            } catch (err) {
+                console.error('Processing error:', err);
+            }
+        }
+
+        async function startTracking() {
+            try {
+                const response = await fetch('/api/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reps: 10 })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    isTracking = true;
+                    trackingInterval = setInterval(trackFrame, 200);
+                }
+            } catch (err) {
+                console.error('Start failed:', err);
+            }
+        }
+
+        window.addEventListener('load', setupCamera);
+        window.addEventListener('beforeunload', () => {
+            if (stream) stream.getTracks().forEach(track => track.stop());
+            if (trackingInterval) clearInterval(trackingInterval);
+        });
+    </script>
+    <script>
+        // Function to update progress in WebView
+        function updateWebViewProgress(count) {
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'exercise_progress',
+                    reps: count
+                }));
+            }
+        }
+        
+        // Add a data attribute to the body to store rep count
+        document.body.setAttribute('data-rep-count', '0');
+        
+        // Override the console.log to add rep counts to the data attribute
+        const originalConsoleLog = console.log;
+        console.log = function() {
+            const args = Array.from(arguments);
+            const logStr = args.join(' ');
+            
+            // Look for rep count in logs
+            const repMatch = logStr.match(/Rep Count:\s*(\d+)/i);
+            if (repMatch) {
+                const count = parseInt(repMatch[1], 10);
+                document.body.setAttribute('data-rep-count', count);
+                // Try to call the WebView update function
+                if (window.updateExerciseProgress) {
+                    window.updateExerciseProgress(count);
+                }
+                // Also dispatch a custom event
+                document.dispatchEvent(new CustomEvent('exercise_progress', {
+                    detail: { count: count }
+                }));
+            }
+            
+            originalConsoleLog.apply(console, args);
+        };
+        
+        // Extra handler for splay count tracking from the tracker
+        async function trackFrame() {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const webcam = document.getElementById('webcam');
+                
+                if (!webcam || !webcam.videoWidth) return;
+                
+                canvas.width = webcam.videoWidth;
+                canvas.height = webcam.videoHeight;
+                ctx.drawImage(webcam, 0, 0);
+                
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image: canvas.toDataURL('image/jpeg', 0.8)
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success && data.current_hand) {
+                    const count = data.splay_count[data.current_hand];
+                    console.log(`Rep Count: ${count}`);
+                    if (window.updateExerciseProgress) {
+                        window.updateExerciseProgress(count);
+                    }
+                }
+            } catch (err) {
+                console.error('Error processing frame:', err);
+            }
+        }
+        
+        // Set up a periodic function to track frames
+        setInterval(trackFrame, 500);
+    </script>
+</body>
+</html>

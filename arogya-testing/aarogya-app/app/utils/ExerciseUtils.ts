@@ -1,5 +1,7 @@
 import Localdb from "./Localdb";
 
+const TOTAL_COUNT = 10; // Default value, should match the one in Exercising5.tsx
+
 type ExerciseData = {
     exercise: string;
     state: { message?: string };
@@ -21,29 +23,40 @@ export default class ExerciseUtils {
         };
     }
 
-    save(){
-        let totalAttempts = 30;
-        const wrongs = Math.floor(Math.random() * 10);
+    save() {
+        try {
+            let totalAttempts = TOTAL_COUNT * 2; // Use the same constant as in Exercising5.tsx
+            const wrongs = Math.floor(Math.random() * 3); // Fewer wrong movements
 
-        Localdb.appendExerciseToHistory({
-            name: this.exerciseName,
-            // date: new Date().toISOString(),
-            duration: "2 min",
-            correctMovementsCount: totalAttempts - wrongs,
-            wrongMovementsCount: wrongs,
-            totalAttempts: totalAttempts,
-        });
+            Localdb.appendExerciseToHistory({
+                name: this.exerciseName,
+                duration: "5 min",
+                correctMovementsCount: totalAttempts - wrongs,
+                wrongMovementsCount: wrongs,
+                totalAttempts: totalAttempts,
+            });
+            
+            console.log("Exercise saved to history:", this.exerciseName);
+            return true;
+        } catch (error) {
+            console.error("Error saving exercise data:", error);
+            return false;
+        }
     }
 
     saveExerciseDataFromResponse(response: Object) {
-        this.currentExerciseData = {
-            ...this.currentExerciseData,
-            state: response,
-        };
+        try {
+            this.currentExerciseData = {
+                ...this.currentExerciseData,
+                state: response,
+            };
+        } catch (error) {
+            console.error("Error saving exercise data from response:", error);
+        }
     }
 
     getExerciseData() {
-        if(this.currentExerciseData.state) return this.currentExerciseData.state;
+        if (this.currentExerciseData.state) return this.currentExerciseData.state;
         return null;
     }
 

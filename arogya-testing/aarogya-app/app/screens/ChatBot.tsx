@@ -5,7 +5,7 @@ import Chatbot from "../utils/ChatbotUtils";
 import * as Speech from "expo-speech";
 import { Linking } from "react-native";
 
-const speakMessage = async (message: string,
+const speakMessage = async (message: string | any,
     isSpeaking: boolean,
     setIsSpeaking: (isSpeaking: boolean) => void,
 ) => {
@@ -15,11 +15,34 @@ const speakMessage = async (message: string,
         return;
     }
 
-    Speech.speak(message, {
-        language: "en",
-        onDone: () => setIsSpeaking(false),
-        onStart: () => setIsSpeaking(true),
-    });
+    // Handle different message formats
+    let textToSpeak = '';
+    if (typeof message === 'string') {
+        textToSpeak = message;
+    } else if (message && typeof message === 'object') {
+        // Extract text from conversation_text field if available
+        textToSpeak = message.conversation_text || '';
+    }
+
+    if (!textToSpeak) {
+        console.log("No text content to speak");
+        return;
+    }
+
+    try {
+        Speech.speak(textToSpeak, {
+            language: "en",
+            onDone: () => setIsSpeaking(false),
+            onStart: () => setIsSpeaking(true),
+            onError: (error) => {
+                console.error("Speech error:", error);
+                setIsSpeaking(false);
+            }
+        });
+    } catch (error) {
+        console.error("Failed to start speech:", error);
+        setIsSpeaking(false);
+    }
 }
 
 const ProfileImageView = ({ source, addMargin = true }: { source: ImageSourcePropType; addMargin?: boolean }) => {

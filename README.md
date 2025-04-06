@@ -2,6 +2,8 @@
 
 ## By Aadi Joshi, Hasan Rupawalla and Kabir Khanuja 
 
+## Detailed Video Demo: https://drive.google.com/file/d/18FTgADRe-QKg3QnuCakmrVI3BXILLn89/view?usp=drivesdk
+
 ## How to run
 
 ### Step 1: Running the storage backend (locally)

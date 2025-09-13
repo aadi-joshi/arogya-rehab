@@ -1,6 +1,6 @@
 # Arogya - Your Personal Virtual Rehabilitation Assisstant
 
-## By Aadi Joshi, Hasan Rupawalla and Kabir Khanuja 
+#### By Aadi Joshi, Aditya Bavadekar, Hasan Rupawalla, Kabir Khanuja and Kavya Bhand 
 
 ## Detailed Video Demo: https://drive.google.com/file/d/18FTgADRe-QKg3QnuCakmrVI3BXILLn89/view?usp=drivesdk
 
@@ -31,4 +31,5 @@ npm i
 # On Mac/Linux
 npm run start-with-backend
 ```
+
 
